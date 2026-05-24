@@ -673,50 +673,123 @@ function drawRain(ts){
 /* ─────────────────────────────────────────────
    CLUE PROPS
 ───────────────────────────────────────────── */
-function drawBin(x,y){
-  ctx.fillStyle='#231208'; ctx.fillRect(x-9,y-16,18,23);
-  texRect(TEX.concrete,x-9,y-16,18,23,0.15);
-  ctx.fillStyle='#321808'; ctx.fillRect(x-11,y-18,22,5);
-  ctx.strokeStyle='#140a04'; ctx.lineWidth=0.5;
-  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(x-9,y-11+i*6);ctx.lineTo(x+9,y-11+i*6);ctx.stroke();}
-  ctx.fillStyle='#EF9F27';
-  [[-6,-28,3,13],[1,-30,3,15],[-2,-32,3,17],[-10,-22,3,7],[7,-24,3,9]].forEach(([bx,by,bw,bh])=>ctx.fillRect(x+bx,y+by,bw,bh));
-  ctx.fillStyle='rgba(255,50,50,0.35)'; ctx.fillRect(x-6,y-14,12,6);
-  ctx.font='5px sans-serif'; ctx.fillStyle='#ff9090'; ctx.fillText('NEA',x-4,y-9);
+// Rubbish bag left outside unit door — appears briefly, then collected (or eaten)
+function drawBag(x,y){
+  // ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.28)';
+  ctx.beginPath();ctx.ellipse(x,y+1,13,3.5,0,0,Math.PI*2);ctx.fill();
+  // main bag body — black plastic, bulging with contents
+  ctx.fillStyle='#141414';
+  ctx.beginPath();
+  ctx.moveTo(x-11,y);
+  ctx.bezierCurveTo(x-15,y-8,x-13,y-22,x-8,y-27);
+  ctx.lineTo(x-4,y-31);
+  ctx.quadraticCurveTo(x,y-29,x+4,y-31);
+  ctx.lineTo(x+8,y-27);
+  ctx.bezierCurveTo(x+13,y-22,x+15,y-8,x+11,y);
+  ctx.closePath();ctx.fill();
+  // highlight shimmer on plastic
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  ctx.beginPath();ctx.ellipse(x-3,y-17,2.5,8,0.25,0,Math.PI*2);ctx.fill();
+  // bulge creases
+  ctx.strokeStyle='rgba(0,0,0,0.55)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(x-9,y-8);ctx.quadraticCurveTo(x-1,y-6,x+8,y-9);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x-10,y-15);ctx.quadraticCurveTo(x-2,y-12,x+7,y-14);ctx.stroke();
+  // knot at top
+  ctx.fillStyle='#0a0a0a';
+  ctx.beginPath();ctx.ellipse(x,y-30,4,2.5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1c1c1c';
+  ctx.beginPath();ctx.bezierCurveTo(x-4,y-30,x-9,y-34,x-5,y-33);ctx.bezierCurveTo(x-2,y-32,x-1,y-30,x-4,y-30);ctx.fill();
+  ctx.beginPath();ctx.bezierCurveTo(x+4,y-30,x+9,y-34,x+5,y-33);ctx.bezierCurveTo(x+2,y-32,x+1,y-30,x+4,y-30);ctx.fill();
+  // liquid drip on side
+  ctx.fillStyle='rgba(140,80,20,0.55)';
+  ctx.beginPath();ctx.moveTo(x+9,y-12);ctx.lineTo(x+10,y-4);ctx.lineTo(x+8,y-4);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+9,y-3,2,1.2,0,0,Math.PI*2);ctx.fill();
 }
 
+// Lalang patch — tall Singapore grass with golden seed-heads, visually distinctive
 function drawGrass(x,y){
-  [{ox:-10,a:-0.35,h:20,w:2.5,c:'#244a10'},{ox:-6,a:-0.15,h:26,w:3,c:'#306018'},
-   {ox:-2,a:0.05,h:30,w:3,c:'#2a5810'},{ox:2,a:0.2,h:24,w:2.5,c:'#306018'},
-   {ox:6,a:0.38,h:22,w:2.5,c:'#244a10'},{ox:10,a:0.12,h:28,w:3,c:'#2a5810'},
-   {ox:-8,a:-0.5,h:16,w:2,c:'#183808'},{ox:8,a:0.5,h:18,w:2,c:'#183808'},
-   {ox:0,a:-0.08,h:32,w:2.5,c:'#387020'}
-  ].forEach(b=>{
+  const blades=[
+    {ox:-13,a:-0.42,h:30,w:2.2,gc:'#3a5c18',sc:'#c8b055'},
+    {ox:-8, a:-0.22,h:38,w:2.6,gc:'#2e5014',sc:'#d0bc60'},
+    {ox:-4, a:-0.06,h:44,w:2.8,gc:'#264a10',sc:'#dcc868'},
+    {ox:0,  a: 0.10,h:40,w:2.6,gc:'#2e5014',sc:'#ccb850'},
+    {ox:4,  a: 0.26,h:36,w:2.4,gc:'#3a5c18',sc:'#c4b050'},
+    {ox:9,  a: 0.44,h:32,w:2.2,gc:'#264a10',sc:'#d0bc60'},
+    {ox:-11,a:-0.58,h:22,w:1.8,gc:'#786020',sc:'#d8c46a'},
+    {ox:11, a: 0.56,h:26,w:1.8,gc:'#786020',sc:'#ccc062'},
+    {ox:-1, a:-0.12,h:46,w:2.2,gc:'#223e0e',sc:'#e0ce70'},
+  ];
+  blades.forEach(b=>{
     ctx.save();ctx.translate(x+b.ox,y);ctx.rotate(b.a);
-    ctx.fillStyle=b.c;ctx.beginPath();
-    ctx.moveTo(-b.w/2,0);ctx.quadraticCurveTo(-b.w/2-1,-b.h*0.5,0,-b.h);
-    ctx.quadraticCurveTo(b.w/2+1,-b.h*0.5,b.w/2,0);ctx.closePath();ctx.fill();
+    // blade
+    ctx.fillStyle=b.gc;ctx.beginPath();
+    ctx.moveTo(-b.w/2,0);
+    ctx.quadraticCurveTo(-b.w/2-0.8,-b.h*0.55,0,-b.h);
+    ctx.quadraticCurveTo(b.w/2+0.8,-b.h*0.55,b.w/2,0);
+    ctx.closePath();ctx.fill();
+    // seed head — feathery oval at tip
+    ctx.fillStyle=b.sc;
+    ctx.beginPath();ctx.ellipse(0,-b.h,b.w*1.4,b.h*0.11,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,240,180,0.35)';
+    ctx.beginPath();ctx.ellipse(-0.5,-b.h+1,b.w*0.6,b.h*0.06,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
   });
 }
 
+// Styrofoam cai fan (economic rice) box — leftover hawker food
 function drawFood(x,y){
-  ctx.fillStyle='#5a4018'; ctx.fillRect(x-12,y-5,24,7);
-  ctx.strokeStyle='#321c08'; ctx.lineWidth=0.5; ctx.strokeRect(x-12,y-5,24,7);
-  ctx.fillStyle='#782808'; ctx.fillRect(x-6,y-11,7,7);
-  ctx.fillStyle='rgba(210,170,20,0.7)'; ctx.beginPath();ctx.arc(x+4,y-9,3,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(150,35,35,0.85)'; ctx.beginPath();ctx.arc(x-2,y-14,2.5,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(100,155,40,0.9)'; ctx.beginPath();ctx.arc(x+1,y-17,2,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#140e06'; ctx.beginPath();ctx.ellipse(x+8,y-4,3.5,1.5,0.3,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#0a0804'; ctx.lineWidth=0.5;
-  ctx.beginPath();ctx.moveTo(x+7,y-5);ctx.lineTo(x+4,y-8);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x+9,y-5);ctx.lineTo(x+12,y-8);ctx.stroke();
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.22)';
+  ctx.beginPath();ctx.ellipse(x,y+1,17,4,0,0,Math.PI*2);ctx.fill();
+  // box bottom — white styrofoam
+  ctx.fillStyle='#e6e2d8';
+  ctx.fillRect(x-15,y-8,30,10);
+  ctx.strokeStyle='#c8c4b4';ctx.lineWidth=0.5;ctx.strokeRect(x-15,y-8,30,10);
+  // rice section (left 55%)
+  ctx.fillStyle='#f4f0e2';
+  ctx.fillRect(x-14,y-7,17,8);
+  // rice grain dots
+  ctx.fillStyle='rgba(200,190,160,0.7)';
+  [[0,0],[1.8,1.5],[3.5,-0.5],[5.2,1],[7,0.5],[2.5,-1],[6,-1.5],[9,0],[4.5,2.5],[8,2]].forEach(([dx,dy])=>{
+    ctx.beginPath();ctx.ellipse(x-13+dx,y-3+dy,0.9,0.5,-0.3,0,Math.PI*2);ctx.fill();
+  });
+  // divider
+  ctx.strokeStyle='#c0bca8';ctx.lineWidth=0.6;
+  ctx.beginPath();ctx.moveTo(x+3,y-7);ctx.lineTo(x+3,y+2);ctx.stroke();
+  // char siew / braised pork (dark section, right 45%)
+  ctx.fillStyle='#2e1006';
+  ctx.fillRect(x+4,y-7,10,7);
+  ctx.fillStyle='#5c2010';
+  ctx.fillRect(x+5,y-6,8,4);
+  // glaze sheen
+  ctx.fillStyle='rgba(255,180,60,0.18)';
+  ctx.fillRect(x+5,y-6,8,2);
+  // open lid leaning back at ~50°
+  ctx.fillStyle='#dedad0';
+  ctx.beginPath();
+  ctx.moveTo(x-15,y-8);
+  ctx.lineTo(x+15,y-8);
+  ctx.lineTo(x+13,y-23);
+  ctx.lineTo(x-13,y-23);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#c4c0b0';ctx.lineWidth=0.5;ctx.stroke();
+  // lid inner shadow
+  ctx.fillStyle='rgba(0,0,0,0.06)';
+  ctx.beginPath();ctx.moveTo(x-15,y-8);ctx.lineTo(x+15,y-8);ctx.lineTo(x+14,y-14);ctx.lineTo(x-14,y-14);ctx.closePath();ctx.fill();
+  // spilled rice grains on floor
+  ctx.fillStyle='#f0ece0';
+  [[-18,y-2,-0.4],[-17,y+2,0.5],[17,y-1,0.2],[18,y+2,-0.6],[-20,y,0.8],[16,y+3,1.0],[19,y-3,-0.3]].forEach(([rx,ry,ang])=>{
+    ctx.save();ctx.translate(x+rx,ry);ctx.rotate(ang);
+    ctx.beginPath();ctx.ellipse(0,0,1.3,0.55,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
 }
 
 const CLUE_TYPES=[
-  {id:'bin',  label:'Overflowing bin!', color:'#EF9F27',draw:drawBin},
-  {id:'grass',label:'Overgrown grass!', color:'#387020',draw:drawGrass},
-  {id:'food', label:'Food scraps here!',color:'#D85A30',draw:drawFood},
+  {id:'bag',  label:'Rubbish bag left out!', color:'#EF9F27',draw:drawBag},
+  {id:'grass',label:'Overgrown lalang!',     color:'#5a9020',draw:drawGrass},
+  {id:'food', label:'Leftover food here!',   color:'#D85A30',draw:drawFood},
 ];
 
 /* ─────────────────────────────────────────────
