@@ -171,7 +171,6 @@ body.fs-body{overflow:hidden;}
       <div class="hc">Caught <span id="cv">0</span></div>
       <div class="hc">Missed <span id="mv">0</span></div>
       <div class="hc">Time <span id="tv">30s</span></div>
-      <div class="hc" id="clue-hud" style="display:none"></div>
     </div>
     <label id="upload-btn" title="Upload background photo">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -188,7 +187,7 @@ body.fs-body{overflow:hidden;}
     <canvas id="gc"></canvas>
     <div id="ov" style="background:rgba(4,12,22,0.88)">
       <h2 style="color:#e8f4ff;font-size:20px;font-weight:500">Tampines Rat Watch</h2>
-      <p style="color:#7db8d4;font-size:13px;text-align:center;max-width:280px;line-height:1.6">Spot the clues. Catch the rats before they reach the drain.</p>
+      <p style="color:#7db8d4;font-size:13px;text-align:center;max-width:280px;line-height:1.6">Catch the rats before they reach the drain.</p>
       <button class="ov-btn" id="start-btn" style="background:#1D9E75;color:#fff">Start game</button>
     </div>
   </div>
@@ -413,7 +412,7 @@ function drawScene(ts){
     const sw=iw*scale, sh=ih*scale;
     const sx=(W-sw)/2, sy=(H-sh)/2;
     ctx.drawImage(bgImage, sx, sy, sw, sh);
-    // Done — rats and clues draw directly on top in the game loop
+    // Done — rats draw directly on top in the game loop
     return;
   }
 
@@ -670,127 +669,6 @@ function drawRain(ts){
   }
 }
 
-/* ─────────────────────────────────────────────
-   CLUE PROPS
-───────────────────────────────────────────── */
-// Rubbish bag left outside unit door — appears briefly, then collected (or eaten)
-function drawBag(x,y){
-  // ground shadow
-  ctx.fillStyle='rgba(0,0,0,0.28)';
-  ctx.beginPath();ctx.ellipse(x,y+1,13,3.5,0,0,Math.PI*2);ctx.fill();
-  // main bag body — black plastic, bulging with contents
-  ctx.fillStyle='#141414';
-  ctx.beginPath();
-  ctx.moveTo(x-11,y);
-  ctx.bezierCurveTo(x-15,y-8,x-13,y-22,x-8,y-27);
-  ctx.lineTo(x-4,y-31);
-  ctx.quadraticCurveTo(x,y-29,x+4,y-31);
-  ctx.lineTo(x+8,y-27);
-  ctx.bezierCurveTo(x+13,y-22,x+15,y-8,x+11,y);
-  ctx.closePath();ctx.fill();
-  // highlight shimmer on plastic
-  ctx.fillStyle='rgba(255,255,255,0.06)';
-  ctx.beginPath();ctx.ellipse(x-3,y-17,2.5,8,0.25,0,Math.PI*2);ctx.fill();
-  // bulge creases
-  ctx.strokeStyle='rgba(0,0,0,0.55)';ctx.lineWidth=0.8;
-  ctx.beginPath();ctx.moveTo(x-9,y-8);ctx.quadraticCurveTo(x-1,y-6,x+8,y-9);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x-10,y-15);ctx.quadraticCurveTo(x-2,y-12,x+7,y-14);ctx.stroke();
-  // knot at top
-  ctx.fillStyle='#0a0a0a';
-  ctx.beginPath();ctx.ellipse(x,y-30,4,2.5,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#1c1c1c';
-  ctx.beginPath();ctx.bezierCurveTo(x-4,y-30,x-9,y-34,x-5,y-33);ctx.bezierCurveTo(x-2,y-32,x-1,y-30,x-4,y-30);ctx.fill();
-  ctx.beginPath();ctx.bezierCurveTo(x+4,y-30,x+9,y-34,x+5,y-33);ctx.bezierCurveTo(x+2,y-32,x+1,y-30,x+4,y-30);ctx.fill();
-  // liquid drip on side
-  ctx.fillStyle='rgba(140,80,20,0.55)';
-  ctx.beginPath();ctx.moveTo(x+9,y-12);ctx.lineTo(x+10,y-4);ctx.lineTo(x+8,y-4);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.ellipse(x+9,y-3,2,1.2,0,0,Math.PI*2);ctx.fill();
-}
-
-// Lalang patch — tall Singapore grass with golden seed-heads, visually distinctive
-function drawGrass(x,y){
-  const blades=[
-    {ox:-13,a:-0.42,h:30,w:2.2,gc:'#3a5c18',sc:'#c8b055'},
-    {ox:-8, a:-0.22,h:38,w:2.6,gc:'#2e5014',sc:'#d0bc60'},
-    {ox:-4, a:-0.06,h:44,w:2.8,gc:'#264a10',sc:'#dcc868'},
-    {ox:0,  a: 0.10,h:40,w:2.6,gc:'#2e5014',sc:'#ccb850'},
-    {ox:4,  a: 0.26,h:36,w:2.4,gc:'#3a5c18',sc:'#c4b050'},
-    {ox:9,  a: 0.44,h:32,w:2.2,gc:'#264a10',sc:'#d0bc60'},
-    {ox:-11,a:-0.58,h:22,w:1.8,gc:'#786020',sc:'#d8c46a'},
-    {ox:11, a: 0.56,h:26,w:1.8,gc:'#786020',sc:'#ccc062'},
-    {ox:-1, a:-0.12,h:46,w:2.2,gc:'#223e0e',sc:'#e0ce70'},
-  ];
-  blades.forEach(b=>{
-    ctx.save();ctx.translate(x+b.ox,y);ctx.rotate(b.a);
-    // blade
-    ctx.fillStyle=b.gc;ctx.beginPath();
-    ctx.moveTo(-b.w/2,0);
-    ctx.quadraticCurveTo(-b.w/2-0.8,-b.h*0.55,0,-b.h);
-    ctx.quadraticCurveTo(b.w/2+0.8,-b.h*0.55,b.w/2,0);
-    ctx.closePath();ctx.fill();
-    // seed head — feathery oval at tip
-    ctx.fillStyle=b.sc;
-    ctx.beginPath();ctx.ellipse(0,-b.h,b.w*1.4,b.h*0.11,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,240,180,0.35)';
-    ctx.beginPath();ctx.ellipse(-0.5,-b.h+1,b.w*0.6,b.h*0.06,0,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  });
-}
-
-// Styrofoam cai fan (economic rice) box — leftover hawker food
-function drawFood(x,y){
-  // shadow
-  ctx.fillStyle='rgba(0,0,0,0.22)';
-  ctx.beginPath();ctx.ellipse(x,y+1,17,4,0,0,Math.PI*2);ctx.fill();
-  // box bottom — white styrofoam
-  ctx.fillStyle='#e6e2d8';
-  ctx.fillRect(x-15,y-8,30,10);
-  ctx.strokeStyle='#c8c4b4';ctx.lineWidth=0.5;ctx.strokeRect(x-15,y-8,30,10);
-  // rice section (left 55%)
-  ctx.fillStyle='#f4f0e2';
-  ctx.fillRect(x-14,y-7,17,8);
-  // rice grain dots
-  ctx.fillStyle='rgba(200,190,160,0.7)';
-  [[0,0],[1.8,1.5],[3.5,-0.5],[5.2,1],[7,0.5],[2.5,-1],[6,-1.5],[9,0],[4.5,2.5],[8,2]].forEach(([dx,dy])=>{
-    ctx.beginPath();ctx.ellipse(x-13+dx,y-3+dy,0.9,0.5,-0.3,0,Math.PI*2);ctx.fill();
-  });
-  // divider
-  ctx.strokeStyle='#c0bca8';ctx.lineWidth=0.6;
-  ctx.beginPath();ctx.moveTo(x+3,y-7);ctx.lineTo(x+3,y+2);ctx.stroke();
-  // char siew / braised pork (dark section, right 45%)
-  ctx.fillStyle='#2e1006';
-  ctx.fillRect(x+4,y-7,10,7);
-  ctx.fillStyle='#5c2010';
-  ctx.fillRect(x+5,y-6,8,4);
-  // glaze sheen
-  ctx.fillStyle='rgba(255,180,60,0.18)';
-  ctx.fillRect(x+5,y-6,8,2);
-  // open lid leaning back at ~50°
-  ctx.fillStyle='#dedad0';
-  ctx.beginPath();
-  ctx.moveTo(x-15,y-8);
-  ctx.lineTo(x+15,y-8);
-  ctx.lineTo(x+13,y-23);
-  ctx.lineTo(x-13,y-23);
-  ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#c4c0b0';ctx.lineWidth=0.5;ctx.stroke();
-  // lid inner shadow
-  ctx.fillStyle='rgba(0,0,0,0.06)';
-  ctx.beginPath();ctx.moveTo(x-15,y-8);ctx.lineTo(x+15,y-8);ctx.lineTo(x+14,y-14);ctx.lineTo(x-14,y-14);ctx.closePath();ctx.fill();
-  // spilled rice grains on floor
-  ctx.fillStyle='#f0ece0';
-  [[-18,y-2,-0.4],[-17,y+2,0.5],[17,y-1,0.2],[18,y+2,-0.6],[-20,y,0.8],[16,y+3,1.0],[19,y-3,-0.3]].forEach(([rx,ry,ang])=>{
-    ctx.save();ctx.translate(x+rx,ry);ctx.rotate(ang);
-    ctx.beginPath();ctx.ellipse(0,0,1.3,0.55,0,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  });
-}
-
-const CLUE_TYPES=[
-  {id:'bag',  label:'Rubbish bag left out!', color:'#EF9F27',draw:drawBag},
-  {id:'grass',label:'Overgrown lalang!',     color:'#5a9020',draw:drawGrass},
-  {id:'food', label:'Leftover food here!',   color:'#D85A30',draw:drawFood},
-];
 
 /* ─────────────────────────────────────────────
    RAT
@@ -837,7 +715,7 @@ function drawRat(r){
 /* ─────────────────────────────────────────────
    GAME LOGIC
 ───────────────────────────────────────────── */
-let rats=[],clues=[],score=0,caught=0,missed=0,timeLeft=30,running=false,timerInt,rafId,spawnT,clueT,frameN=0;
+let rats=[],score=0,caught=0,missed=0,timeLeft=30,running=false,timerInt,rafId,spawnT,frameN=0;
 const leaderboard=[{name:'Amirah',blk:'Blk 472',score:210},{name:'Wei Liang',blk:'Blk 489',score:180},{name:'Rajan',blk:'Blk 501',score:150}];
 
 // Photo ground plane: wet floor starts ~y=295 (74% down 400px canvas)
@@ -846,30 +724,6 @@ const leaderboard=[{name:'Amirah',blk:'Blk 472',score:210},{name:'Wei Liang',blk
 //   left wall / mailbox area: x 20-120
 //   centre void deck floor:   x 160-480
 //   right railing area:       x 500-620
-const CLUE_ZONES=[
-  {xmin:30, xmax:130, y:310},  // left — near mailbox/wall
-  {xmin:160,xmax:460,y:320},   // centre — void deck floor
-  {xmin:490,xmax:610,y:310},   // right — near railing/bin
-];
-
-function spawnClue(){
-  if(!running)return;
-  const t=CLUE_TYPES[Math.floor(Math.random()*3)];
-  const zone=CLUE_ZONES[Math.floor(Math.random()*CLUE_ZONES.length)];
-  const cx=zone.xmin+Math.random()*(zone.xmax-zone.xmin);
-  const cy=zone.y+Math.random()*12;
-  clues.push({x:cx,y:cy,type:t,life:420});
-  const ch=$('clue-hud'); ch.style.display=''; ch.style.background='#0d1a14';
-  ch.style.border=`0.5px solid ${t.color}`; ch.style.color=t.color; ch.textContent=t.label;
-  setTimeout(()=>ch.style.display='none',2800);
-  setTimeout(()=>{if(!running)return;for(let i=0;i<2;i++)spawnRatAt(cx,cy+6);},1700+Math.random()*600);
-}
-function spawnRatAt(cx,cy){
-  const dir=Math.random()<0.5?1:-1;
-  // size varies with depth: rats closer to camera (higher y) appear bigger
-  const depthScale=0.85+((cy-295)/120)*0.35;
-  rats.push({x:cx,y:cy,dir,speed:1.2+Math.random()*1.6,sz:(10+Math.random()*5)*depthScale,alive:true,escaped:false,frame:0});
-}
 function spawnRat(){
   // Three depth lanes matching photo perspective
   const lanes=[
@@ -894,13 +748,6 @@ function loop(ts){
   if(!running)return;
   frameN++;
   drawScene(ts);
-  clues=clues.filter(c=>c.life>0);
-  for(const c of clues){
-    c.life--; c.type.draw(c.x,c.y);
-    const pulse=Math.sin(ts/600)*0.25+0.75;
-    ctx.strokeStyle=c.type.color; ctx.lineWidth=1.5; ctx.globalAlpha=pulse*0.8;
-    ctx.beginPath(); ctx.arc(c.x,c.y-10,16,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
-  }
   rats=rats.filter(r=>!r.escaped);
   for(const r of rats){
     r.x+=r.dir*r.speed; r.frame++;
@@ -910,16 +757,15 @@ function loop(ts){
   rafId=requestAnimationFrame(loop);
 }
 function startGame(){
-  rats=[];clues=[];score=0;caught=0;missed=0;timeLeft=30;frameN=0;
+  rats=[];score=0;caught=0;missed=0;timeLeft=30;frameN=0;
   $('sv').textContent=0;$('cv').textContent=0;$('mv').textContent=0;$('tv').textContent='30s';
   $('ov').style.display='none'; running=true;
   let sd=1300; function sched(){if(!running)return;spawnRat();sd=Math.max(460,sd-18);spawnT=setTimeout(sched,sd);}sched();
-  let cs=3200; function sc2(){if(!running)return;spawnClue();cs=Math.max(2200,cs-40);clueT=setTimeout(sc2,cs);}sc2();
   timerInt=setInterval(()=>{timeLeft--;$('tv').textContent=timeLeft+'s';if(timeLeft<=0)endGame();},1000);
   rafId=requestAnimationFrame(loop);
 }
 function endGame(){
-  running=false;clearInterval(timerInt);cancelAnimationFrame(rafId);clearTimeout(spawnT);clearTimeout(clueT);showEntryForm();
+  running=false;clearInterval(timerInt);cancelAnimationFrame(rafId);clearTimeout(spawnT);showEntryForm();
 }
 function showEntryForm(){
   const ov=$('ov'); ov.style.display='flex'; ov.style.background='rgba(4,12,22,0.92)';
@@ -1003,13 +849,13 @@ function showTitleScreen(){
     ts.style.opacity='0';
     setTimeout(()=>{
       ts.style.display='none';
-      rats=[];clues=[];score=0;caught=0;missed=0;timeLeft=30;
+      rats=[];score=0;caught=0;missed=0;timeLeft=30;
       $('sv').textContent=0;$('cv').textContent=0;$('mv').textContent=0;$('tv').textContent='30s';
       const ov=$('ov');
       ov.style.display='flex';
       ov.style.background='rgba(4,12,22,0.88)';
       ov.innerHTML=`<h2 style="color:#e8f4ff;font-size:20px;font-weight:500">Rat Busters @ Tampines</h2>
-        <p style="color:#7db8d4;font-size:13px;text-align:center;max-width:280px;line-height:1.6">Spot the clues. Catch the rats before they reach the drain.</p>
+        <p style="color:#7db8d4;font-size:13px;text-align:center;max-width:280px;line-height:1.6">Catch the rats before they reach the drain.</p>
         <button class="ov-btn" id="start-btn2" style="background:#1D9E75;color:#fff">Play again</button>`;
       document.getElementById('start-btn2').onclick=startGame;
       drawScene(0);
