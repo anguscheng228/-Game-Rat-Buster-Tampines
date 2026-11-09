@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>Rat Busters</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -12,8 +15,8 @@
   --ink:#f4ead0;--muted:#91acb7;--cyan:#59c4bf;--gold:#e8bd55;--coral:#df5945;--red:#b93b2f;
   --panel:rgba(5,17,27,.94);--line:rgba(112,181,196,.3);--cut:7px;
 }
-html,body{height:100%;background:#04080f;font-family:var(--font-ui)}
-body{display:flex;flex-direction:column;align-items:center;padding:0.75rem;gap:0;overflow-x:hidden}
+html,body{width:100%;height:100%;background:#04080f;font-family:var(--font-ui);overflow:hidden;overscroll-behavior:none}
+body{display:flex;flex-direction:column;align-items:center;padding:0.75rem;gap:0;touch-action:none}
 
 /* ── wrapper ── */
 #gw{user-select:none;width:100%;max-width:700px;display:flex;flex-direction:column;gap:0}
@@ -362,7 +365,7 @@ body.fs-body{overflow:hidden;}
       <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 9.5c1.2 1.4 1.2 3.6 0 5"/><path d="M18 7c2.6 2.8 2.6 7.2 0 10"/></svg>
       <span id="sound-label">Sound</span>
     </button>
-    <button id="fs-btn" title="Fullscreen">
+    <button id="fs-btn" type="button" title="Enter fullscreen" aria-pressed="false">
       <svg id="fs-icon-expand" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
       <svg id="fs-icon-shrink" viewBox="0 0 24 24" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
       <span id="fs-label">Fullscreen</span>
@@ -1380,7 +1383,7 @@ function showLeaderboardScreen(){
   if(leaderboardPose==='pose-peek')leaderboardBoard.classList.add('mascot-peek');
   lbs.classList.add('visible');
   lbs.scrollTop=0;
-  $('lb-retry').onclick=e=>{e.stopPropagation();lbs.classList.remove('visible');startGame();};
+  $('lb-retry').onclick=e=>{e.stopPropagation();requestGameFullscreen();lbs.classList.remove('visible');startGame();};
   $('lb-title-btn').onclick=e=>{e.stopPropagation();lbs.classList.remove('visible');showTitleScreen();};
 }
 
@@ -1404,6 +1407,7 @@ function showTitleScreen(){
   let gone=false;
   function dismissTitle(e){
     if(gone) return; gone=true;
+    requestGameFullscreen();
     // Clean up all listeners immediately
     document.removeEventListener('keydown', dismissTitle);
     ts.removeEventListener('click', dismissTitle);
@@ -1415,7 +1419,7 @@ function showTitleScreen(){
       rats=[];score=0;caught=0;missed=0;missTaps=0;combo=0;bestCombo=0;timeLeft=30;
       $('sv').textContent=0;$('cv').textContent=0;$('mv').textContent=0;$('tv').textContent='30s';updateCombo();
       renderTutorial('start-btn2','START THE CHASE');
-      document.getElementById('start-btn2').onclick=startGame;
+      document.getElementById('start-btn2').onclick=()=>{requestGameFullscreen();startGame();};
       drawScene(0);
     },520);
   }
@@ -1454,7 +1458,7 @@ C.addEventListener('touchstart',e=>{
   e.preventDefault();if(e.touches.length!==1)return;
   lastTouchAt=performance.now();const t=e.touches[0];handleClick({clientX:t.clientX,clientY:t.clientY});
 },{passive:false});
-$('start-btn').onclick=startGame;
+$('start-btn').onclick=()=>{requestGameFullscreen();startGame();};
 
 // ── FULLSCREEN + RESPONSIVE ──────────────────
 const gw=document.getElementById('gw');
@@ -1464,26 +1468,82 @@ const fsExpand=document.getElementById('fs-icon-expand');
 const fsShrink=document.getElementById('fs-icon-shrink');
 const rotateHint=document.getElementById('rotate-hint');
 let isFs=false;
+let wakeLock=null;
 
-function enterFs(){
-  // CSS-only fake fullscreen — no browser API, no ESC bar
-  if(screen.orientation&&screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(()=>{});
-  }
-  gw.classList.add('is-fullscreen');
-  document.body.classList.add('fs-body');
-  fsExpand.style.display='none'; fsShrink.style.display='';
-  fsLabel.textContent='Exit';
-  isFs=true; checkPortrait();
+function fullscreenElement(){
+  return document.fullscreenElement||document.webkitFullscreenElement||null;
 }
-function exitFs(){
-  if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock();
-  gw.classList.remove('is-fullscreen','portrait-warn');
-  document.body.classList.remove('fs-body');
-  document.getElementById('rotate-hint').style.display='none';
-  fsExpand.style.display=''; fsShrink.style.display='none';
-  fsLabel.textContent='Fullscreen';
-  isFs=false;
+function setGameLayout(enabled){
+  isFs=enabled;
+  gw.classList.toggle('is-fullscreen',enabled);
+  document.body.classList.toggle('fs-body',enabled);
+  if(!enabled){
+    gw.classList.remove('portrait-warn');
+    rotateHint.style.display='none';
+  }
+  checkPortrait();
+}
+function updateFullscreenControls(){
+  const nativeActive=!!fullscreenElement();
+  fsExpand.style.display=nativeActive?'none':'';
+  fsShrink.style.display=nativeActive?'':'none';
+  fsLabel.textContent=nativeActive?'Exit Fullscreen':'Fullscreen';
+  fsBtn.title=nativeActive?'Exit fullscreen':'Enter fullscreen';
+  fsBtn.setAttribute('aria-pressed',nativeActive?'true':'false');
+}
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)||document.visibilityState!=='visible')return false;
+  try{
+    if(wakeLock&&!wakeLock.released)return true;
+    wakeLock=await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release',()=>{wakeLock=null;},{once:true});
+    return true;
+  }catch(_){
+    wakeLock=null;
+    return false;
+  }
+}
+async function requestGameFullscreen(){
+  setGameLayout(true);
+  // Keep kiosk displays awake. This is intentionally started by the same
+  // player gesture that requests fullscreen.
+  requestWakeLock();
+  if(fullscreenElement()){updateFullscreenControls();return true;}
+  const root=document.documentElement;
+  try{
+    if(root.requestFullscreen){
+      // Native fullscreen itself hides the browser chrome. Omitting optional
+      // parameters keeps this compatible with older kiosk Chromium builds.
+      await root.requestFullscreen();
+    }else if(root.webkitRequestFullscreen){
+      root.webkitRequestFullscreen();
+    }else{
+      updateFullscreenControls();
+      return false;
+    }
+    if(screen.orientation&&screen.orientation.lock){
+      screen.orientation.lock('landscape').catch(()=>{});
+    }
+    updateFullscreenControls();
+    return true;
+  }catch(_){
+    // Browsers may refuse fullscreen outside a user gesture. Keep the
+    // edge-to-edge CSS layout and allow the player to retry with the button.
+    updateFullscreenControls();
+    return false;
+  }
+}
+async function exitGameFullscreen(){
+  try{
+    if(document.exitFullscreen&&document.fullscreenElement){
+      await document.exitFullscreen();
+    }else if(document.webkitExitFullscreen&&document.webkitFullscreenElement){
+      document.webkitExitFullscreen();
+    }
+  }catch(_){}
+  if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();
+  setGameLayout(false);
+  updateFullscreenControls();
 }
 function checkPortrait(){
   if(!isFs) return;
@@ -1492,15 +1552,25 @@ function checkPortrait(){
   rotateHint.style.display=portrait?'flex':'none';
 }
 
-fsBtn.addEventListener('click',()=>isFs?exitFs():enterFs());
-document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&isFs) exitFs(); });
-document.addEventListener('webkitfullscreenchange',()=>{ if(!document.webkitFullscreenElement&&isFs) exitFs(); });
+fsBtn.addEventListener('click',e=>{e.stopPropagation();fullscreenElement()?exitGameFullscreen():requestGameFullscreen();});
+function onFullscreenChange(){
+  const active=!!fullscreenElement();
+  setGameLayout(active);
+  updateFullscreenControls();
+}
+document.addEventListener('fullscreenchange',onFullscreenChange);
+document.addEventListener('webkitfullscreenchange',onFullscreenChange);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&(fullscreenElement()||isFs))requestWakeLock();
+});
 window.addEventListener('resize',checkPortrait);
 window.addEventListener('orientationchange',checkPortrait);
 
 // ── INIT ──────────────────────────────────────
-// Default to the existing CSS fullscreen presentation. The button still exits it.
-enterFs();
+// Fill the available viewport immediately. The first player gesture upgrades
+// this presentation to the browser's real fullscreen mode and hides its chrome.
+setGameLayout(true);
+updateFullscreenControls();
 buildTextures();
 buildDecals();
 drawScene(0);
@@ -1516,6 +1586,7 @@ document.getElementById('ov').addEventListener('touchstart', e=>e.stopPropagatio
   var gone = false;
   function dismiss(e){
     if(gone) return;
+    requestGameFullscreen();
     gone = true;
     // Remove all three listeners immediately before doing anything else
     document.removeEventListener('keydown', dismiss);
